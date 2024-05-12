@@ -91,7 +91,7 @@ async def exp_smooth_column(message: Message, state: FSMContext):
     currency = data['currency']
     security = data['security']
     values = data['last_req_prices']
-    
+    print(values)
     file_path = qplot.plot_exp_smooth(values, price_column, security, currency)
     graph = FSInputFile(path=file_path)
     await message.reply_photo(photo=graph, caption=f'График экспоненциального сглаживания {security} ({currency}) - {price_column}') 

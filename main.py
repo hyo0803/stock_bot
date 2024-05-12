@@ -9,8 +9,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 from config.config_reader import config
-from src.handlers import common#, shares_input, bonds_input, visuals, predicts
-#import db functions
+from src.handlers import common
+
 from src.data_handlers.db_executor import db
 
 async def on_startup():

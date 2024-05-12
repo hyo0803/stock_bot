@@ -41,7 +41,7 @@ async def cmd_predict(message: Message, state: FSMContext):
             print(clean_data)
             # try:
             model, scaler = linear.train_linear(clean_data)
-            pred = linear.predict_future_prices(clean_data, model, scaler, fut_days)
+            pred, recommendation = linear.predict_future_prices(clean_data, model, scaler, fut_days)
             
             file_path = qplot.plot_predict_future(clean_data, pred, security_p, currency)
             graph = FSInputFile(path=file_path)
@@ -69,8 +69,8 @@ async def cmd_predict(message: Message, state: FSMContext):
             text = 'Прогнозирование по дням:\n\n      Дата      |      Цена  \n------------------------\n'
             for row in p.index:
                 text += f"{p['Date'].loc[row].strftime('%Y-%m-%d')}   |   {np.round(p['Predicted Close'].loc[row], 2)} {currency}\n"
-                if p['Result'].loc[row][0]=='спад': down+=1
-                elif p['Result'].loc[row][0]=='рост': up+=1
+                if p['Result'].loc[row]=='спад': down+=1
+                elif p['Result'].loc[row]=='рост': up+=1
             # отправка данных в чат
             if down>up:
                 await message.answer(text=f"В среднем через {fut_days} дней ожидается:\nСПАД📉↘️", 
@@ -81,7 +81,10 @@ async def cmd_predict(message: Message, state: FSMContext):
             elif down==up:
                 await message.answer(text=f"В среднем через {fut_days} дней динамики НЕ ожидается", 
                                 reply_markup=ReplyKeyboardRemove())
-                
+            
+            await message.answer(text=f"Краткая рекомендация: {recommendation}", 
+                                reply_markup=ReplyKeyboardRemove())  
+             
             await message.answer(text=text, 
                                 reply_markup=make_row_keyboard(['Назад⏪'])
                                 )

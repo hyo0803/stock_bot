@@ -48,16 +48,15 @@ def train_linear(data):
     #---------------- PREDICT diff ----------------------
     y_pred_diff_lr = model.predict(X_test_scaled)
     # Calculating the predicted close values & Adding the predicted diff to the previous day's close
-    # ndata['nrow'] = np.arange(1, ndata.shape[0]+1)
-    # cur = ndata.loc[pd.to_datetime(X_test.squeeze())]
-    # ndata['cur'] = cur
-    # prev = cur['nrow'].values-1
+    ndata['nrow'] = np.arange(1, ndata.shape[0]+1)
+    cur = ndata.loc[pd.to_datetime(X_test.squeeze())]
+    prev = cur['nrow'].values-1
     f = ndata.copy().reset_index()
     # print(f)
     # print('------')
-    cur = np.array([ndata.index.get_loc(x) for x in pd.to_datetime(X_test.squeeze())])
-    prev_index = np.array([ndata.index.get_loc(x) - shift for x in pd.to_datetime(X_test.squeeze())])
-    print(cur.shape, prev_index.shape, X_test.shape, y_pred_diff_lr.shape)
+    # cur = np.array([ndata.index.get_loc(x) for x in pd.to_datetime(X_test.squeeze())])
+    # prev_index = np.array([ndata.index.get_loc(x) - shift for x in pd.to_datetime(X_test.squeeze())])
+    # print(cur.shape, prev_index.shape, X_test.shape, y_pred_diff_lr.shape)
 
     predicted_close_lr = f['close'].loc[prev].values + y_pred_diff_lr
 
@@ -86,11 +85,11 @@ def predict_future_prices(data, model, scaler, days_ahead):
     verd = []
     for i, date in enumerate(future_dates):
         if future_price_diff[i] < 0:
-            verd.append(['спад'])
+            verd.append('спад')
         elif future_price_diff[i] > 0:
-            verd.append(['рост'])
+            verd.append('рост')
         else:
-            verd.append(['без изменений'])
+            verd.append('без изменений')
             
         close_pred = close[-1]+future_price_diff[i]
         close = np.append(close,close_pred)
@@ -99,4 +98,12 @@ def predict_future_prices(data, model, scaler, days_ahead):
     predictions_df = pd.DataFrame({'Date': future_dates,
                                    'Predicted Close': predicted_prices,
                                    'Result': verd}).set_index('Date').sort_index(ascending=True)
-    return predictions_df
+    
+    recomm=''
+    if predictions_df[predictions_df['Result']=='спад'].shape[0] > predictions_df.shape[0] / 2:
+      recomm='Продать'
+    elif predictions_df[predictions_df['Result']=='рост'].shape[0] > predictions_df.shape[0] / 2:
+      recomm='Купить'
+    elif predictions_df[predictions_df['Result']=='без изменений'].shape[0] > predictions_df.shape[0] / 2:
+      recomm='Докупить'
+    return predictions_df, recomm
