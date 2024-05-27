@@ -19,7 +19,6 @@ class MarketDataDownloader():
     self.cursor = cursor
     self.engines = pd.read_sql("SELECT * FROM engines", conn)
     self.markets = pd.read_sql("SELECT * FROM markets", conn)
-    self.moex_currs = pd.read_sql('''SELECT distinct security, currency FROM prices''', conn)
     self.engine='stock'
     self.market = ''
     self.securities = ''
@@ -42,8 +41,8 @@ class MarketDataDownloader():
         frames = self.frames
         df = pd.concat(frames).reset_index(drop=True)
         df = df.drop_duplicates()
-        df['q_date'] = df['begin'].astype(object)
-        df = df[['security','open','close','high','low','volume','q_date','currency','instrument_type']]
+        df['date'] = df['begin'].astype(object)
+        df = df[['security','open','close','high','low','volume','date','instrument_type']]
         self.data = df
     else:
         self.data = pd.DataFrame()
@@ -114,7 +113,6 @@ class MarketDataDownloader():
 
   async def download_security_candles(self, engine, market, security):
     d = []
-    database = self.moex_currs
     for year in self.years:
         candles = requests.get(
         f'https://iss.moex.com/iss/engines/{engine}/markets/{market}/securities/{security}/candles.json?from={year}-01-01&till={self.end_date}&interval=24'
@@ -122,12 +120,6 @@ class MarketDataDownloader():
 
         data = pd.DataFrame([{k:r[i] for i,k in enumerate(candles['candles']['columns'])} for r in candles['candles']['data']])
         data.insert(0, 'security', security)
-        try:
-            cur = database[database['security']==security]['currency'].values
-            cur = cur[0]
-        except:
-            cur = 'NotFound'
-        data['currency'] = cur
         data['instrument_type'] = market
         d.append(data)
 
@@ -174,8 +166,6 @@ class MarketDataDownloader():
     data.insert(0, 'security', ticker)
     data.columns = map(str.lower, data.columns)
     data = data.rename(columns={'date': 'begin'})
-    cur = yf.Ticker(ticker).info['currency']
-    data['currency'] = cur
     return data
 
   # get quotes for all given tickers
@@ -209,13 +199,13 @@ class MarketDataDownloader():
     self.frames.extend(frames)
 
 
-# async def main():
-#     conn = sq.connect('src/data_handlers/stock.db')
-#     cursor = conn.cursor()
-#     m = MarketDataDownloader(conn, cursor)
-#     await m.fit(input_data=['AAkvndkPL', 'NKE', 'IMOEX'])#, start_date='2020-01-01')
-#     df = m.get_data()
-#     print(df)
+async def main():
+    conn = sq.connect('stock.db')
+    cursor = conn.cursor()
+    m = MarketDataDownloader(conn, cursor)
+    await m.fit(input_data=['AAkvndkPL', 'NKE', 'IMOEX'],start_date='2021-01-01')#, start_date='2020-01-01')
+    df = m.get_data()
+    print(df)
 
-# if __name__ == '__main__':
-#     asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())

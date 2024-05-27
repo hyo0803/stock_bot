@@ -32,6 +32,8 @@ async def set_main_menu(bot: Bot):
                    description='Графики'),
         BotCommand(command='/predict',
                    description='Прогноз'),
+        BotCommand(command='/portfolio',
+                   description='Портфель'),
         BotCommand(command='/reset',
                    description='Сброс')
     ]

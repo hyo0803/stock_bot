@@ -33,21 +33,21 @@ class Database():
                         engine TEXT, 
                         market TEXT, 
                         security TEXT, 
-                        cur TEXT, 
-                        fut_days NUMERIC)''')
+                        cur TEXT)''')
         self.db.commit()
         
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS 
                     request_prices(
                         user_id NUMERIC PRIMARY KEY, 
-                        use_date DATETIME PRIMARY KEY,
+                        use_date DATETIME,
+                        date DATE,
                         security TEXT,
+                        platform TEXT,
                         open NUMERIC,
-                        close NUMERIC,
                         high NUMERIC,
                         low NUMERIC,
+                        close NUMERIC,
                         volume NUMERIC,
-                        q_date DATE,
                         currency TEXT,
                         instrument_type TEXT)''')
         self.db.commit()
@@ -68,7 +68,7 @@ class Database():
         async with self.lock:
             user = self.cursor.execute(f'''SELECT * FROM user_data WHERE user_id == {user_id}''').fetchone()
             if not user:
-                self.cursor.execute('''INSERT INTO user_data VALUES(?,?,?,?,?,?,?)''', (user_id, '','','','','',0))
+                self.cursor.execute('''INSERT INTO user_data VALUES(?,?,?,?,?,?)''', (user_id, '','','','',''))
                 self.db.commit()
                 
     async def create_plotdata(self, user_id):
@@ -86,9 +86,7 @@ class Database():
                             SET use_date = '{data['use_date']})',
                                 engine = '{data['engine']}',
                                 market = '{data['market_name']}',
-                                security = '{data['security']}',
-                                cur = '{data['cur']}',
-                                fut_days = {data['fut_days']}
+                                security = '{data['security']}'
                             WHERE user_id = {user_id} 
                                 ''')
             self.db.commit()
@@ -99,36 +97,61 @@ class Database():
         df = pd.DataFrame()
         data = await state.get_data()
         async with self.lock:
-            row = self.cursor.execute(f'''SELECT * FROM prices 
-                                                WHERE instrument_type = "{data['market_name']}" and
-                                                    security = "{data['security']}"''').fetchone()
+            # row = self.cursor.execute(f'''SELECT * FROM prices 
+            #                                     WHERE instrument_type = "{data['market_name']}" and
+            #                                         security = "{data['security']}"''').fetchone()
+            row = self.cursor.execute(f'''SELECT * FROM securities 
+                                                WHERE security = "{data['security']}"''').fetchone()
             if row:
+                # df = pd.read_sql(f'''
+                #                     SELECT * FROM prices
+                #                     where instrument_type = "{data['market_name']}" and
+                #                         security = "{data['security']}"
+                #                     order by date asc''', self.db)
                 df = pd.read_sql(f'''
-                                    SELECT * FROM prices
-                                    where instrument_type = "{data['market_name']}" and
-                                        security = "{data['security']}"
-                                    order by q_date asc''', self.db)
+                                    SELECT * FROM securities
+                                    where security = "{data['security']}"''', self.db)
         return df
-            
-    async def insert_prices(self, state: FSMContext, user_id):
+      
+    async def lookup_closes(self, state: FSMContext):
+        df = pd.DataFrame()
         data = await state.get_data()
         async with self.lock:
-            prices = data['prices']
-            prices = prices[['row_id', 'security', 'open', 'close', 'high', 'low', 'volume',
-                            'q_date', 'currency', 'instrument_type']]
-            prices.to_sql('prices', self.db, if_exists = 'append', index=False)
+            row = self.cursor.execute(f'''SELECT * FROM closes''').fetchone()
+            if row:
+                df = pd.read_sql(f'''
+                                    SELECT * FROM closes''', self.db)
+        return df  
+    
+    async def get_securities(self, state: FSMContext):
+        df = pd.DataFrame()
+        data = await state.get_data()
+        async with self.lock:
+            row = self.cursor.execute(f'''SELECT * FROM securities''').fetchone()
+            if row:
+                df = pd.read_sql(f'''
+                                    SELECT * FROM securities''', self.db)
+        return df
             
-            self.cursor.execute('update prices set q_date=date(q_date)')
-            self.db.commit()
-            print('Added new symbol[s]')
+    # async def insert_prices(self, state: FSMContext, user_id):
+    #     data = await state.get_data()
+    #     async with self.lock:
+    #         prices = data['prices']
+    #         prices = prices[['row_id', 'security', 'open', 'close', 'high', 'low', 'volume',
+    #                         'date', 'currency', 'instrument_type']]
+    #         prices.to_sql('prices', self.db, if_exists = 'append', index=False)
+            
+    #         self.cursor.execute('update prices set q_date=date(q_date)')
+    #         self.db.commit()
+    #         print('Added new symbol[s]')
         
 
     async def edit_requestdata(self, state: FSMContext, user_id):
         data = await state.get_data()
         async with self.lock:
             req_prices = data['req_prices']
-            req_prices.to_sql('request_prices', self.db, if_exists = 'append', index=False)
-            self.cursor.execute('update request_prices set q_date=date(q_date)')
+            req_prices.to_sql('request_prices', self.db, if_exists = 'replace', index=False)
+            self.cursor.execute('update request_prices set date=date(date)')
             self.db.commit()
             print('Renew requested price data')
             
@@ -176,7 +199,7 @@ class Database():
                                             select max(use_date) 
                                             from request_prices
                                             where user_id = {user_id})
-                                    order by q_date asc
+                                    order by date asc
                                     ''', self.db)
         return df
 

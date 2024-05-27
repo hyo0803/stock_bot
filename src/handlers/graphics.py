@@ -96,9 +96,9 @@ async def exp_smooth_column(message: Message, state: FSMContext):
     graph = FSInputFile(path=file_path)
     await message.reply_photo(photo=graph, caption=f'График экспоненциального сглаживания {security} ({currency}) - {price_column}') 
     
-    start_date = str(datetime.strptime(pd.to_datetime(values['q_date']).min().strftime('%Y-%m-%d'), 
+    start_date = str(datetime.strptime(pd.to_datetime(values['date']).min().strftime('%Y-%m-%d'), 
                                                            '%Y-%m-%d').date())
-    end_date = str(datetime.strptime(pd.to_datetime(values['q_date']).max().strftime('%Y-%m-%d'), 
+    end_date = str(datetime.strptime(pd.to_datetime(values['date']).max().strftime('%Y-%m-%d'), 
                                                            '%Y-%m-%d').date())
             
     plot_data = pd.DataFrame.from_dict({'user_id':[user_id], 
@@ -145,9 +145,9 @@ async def date_price_column(message: Message, state: FSMContext):
     graph = FSInputFile(path=file_path)
     await message.reply_photo(photo=graph, caption=f'График временного изменения {price_column} - {security} ({currency})') 
     
-    start_date = str(datetime.strptime(pd.to_datetime(values['q_date']).min().strftime('%Y-%m-%d'), 
+    start_date = str(datetime.strptime(pd.to_datetime(values['date']).min().strftime('%Y-%m-%d'), 
                                                            '%Y-%m-%d').date())
-    end_date = str(datetime.strptime(pd.to_datetime(values['q_date']).max().strftime('%Y-%m-%d'), 
+    end_date = str(datetime.strptime(pd.to_datetime(values['date']).max().strftime('%Y-%m-%d'), 
                                                            '%Y-%m-%d').date())
             
     plot_data = pd.DataFrame.from_dict({'user_id':[user_id], 

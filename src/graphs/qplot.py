@@ -7,21 +7,30 @@ sns.set_style('darkgrid')
 
 
 def plot_predict_future(data, predicted, security, currency):
+    data.index = pd.to_datetime(data.index)
     last2months = data[['close']][-10:]
-    predicted = predicted[['Predicted Close']]
-    fdays = predicted.shape[0]
-    predicted.index = pd.to_datetime(predicted.index)
+    last2months['type'] = 'Actual'
     
-    x = pd.to_datetime(np.sort(np.unique(np.hstack([last2months.index, predicted.index])), axis=None))
+    predicted = predicted[['Predicted Close']]
+    predicted.index = pd.to_datetime(predicted.index)
+    predicted['close'] = predicted['Predicted Close']
+    predicted['type'] = 'Forecast'
+    
+    fdays = predicted.shape[0]
+    df = pd.concat([last2months, predicted]).sort_index()
+    
+    x = df.index
     years = pd.DatetimeIndex(x)
     min_d, max_d = years.min(), years.max()
     res = get_xticks(min_d, max_d)
 
     plt.figure(figsize=(7, 4))
-    plt.plot(last2months,label=f'{security} Historic Close', color='grey')
+    sns.lineplot(x=df.index, y=df.close, data=df,
+                 palette=['gray', 'green'],hue='type')
+    # plt.plot(last2months,label=f'{security} Historic Close', color='grey')
     
-    plt.plot(predicted, label=f'{security} Future Close [+{fdays}]',  
-                        linestyle = 'dashed', color='green')
+    # plt.plot(predicted, label=f'{security} Future Close [+{fdays}]',  
+    #                     linestyle = 'dashed', color='green')
     
     plt.title(r"$\bf{"+security+"("+currency+")"+"}$\nFuture Close [+"+str(fdays)+" days]", fontsize=10,pad=10)
     plt.xlabel('Days')
@@ -42,7 +51,7 @@ def get_xticks(min_d, max_d):
 
 def plot_date_price(data, price_column, security, currency):
     
-    data = data.set_index('q_date')
+    data = data.set_index('date')
     data.index = pd.to_datetime(data.index)
     data = data.sort_index(ascending=True)
 
@@ -76,8 +85,8 @@ def plot_date_price(data, price_column, security, currency):
     
 def plot_exp_smooth(data, price_column, security, currency):
     
-    data = data[[price_column.lower(), 'q_date']]
-    data = data.set_index('q_date')
+    data = data[[price_column.lower(), 'date']]
+    data = data.set_index('date')
     data.index = pd.to_datetime(data.index)
     data = data.sort_index(ascending=True)
     

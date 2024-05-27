@@ -9,7 +9,7 @@ import numpy as np
 from datetime import timedelta, datetime
 
 def train_linear(data):
-    shift=150
+    shift=200
     #возьмём последний индекс последнюю дату закрытия
     last_date = data.iloc[[-1]].index
     # # "прибавим" shift день
